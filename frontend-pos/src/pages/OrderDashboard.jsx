@@ -70,17 +70,17 @@ export default function OrderDashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100 font-sans">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b sticky top-0 z-20 flex items-center justify-between px-4 py-3 sm:px-6">
-        <h1 className="text-center text-lg sm:text-2xl font-bold text-gray-900 flex-1">
+      <header className="bg-white shadow-sm border-b sticky top-0 z-20 flex items-center justify-between px-4 py-4 sm:px-6">
+        <h1 className="text-center text-xl sm:text-2xl font-bold text-gray-900 flex-1">
           ออเดอร์หน้าร้าน
         </h1>
         <button
           className="lg:hidden text-gray-700 hover:text-gray-900"
           onClick={() => setMenuOpen(!menuOpen)}
         >
-          {menuOpen ? <CloseIcon size={24} /> : <MenuIcon size={24} />}
+          {menuOpen ? <CloseIcon size={28} /> : <MenuIcon size={28} />}
         </button>
       </header>
 
@@ -99,33 +99,22 @@ export default function OrderDashboard() {
         />
       </div>
 
-      <main className="px-4 py-4 sm:px-6 lg:flex lg:flex-col">
+      <main className="px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
         {/* Sidebar filters for desktop */}
         <aside className="hidden lg:flex mb-4">
           <FilterArea filter={filter} onChange={setFilter} />
         </aside>
 
         {/* Loading & error */}
-        {loading && (
-          <div className="flex justify-center items-center py-8">
-            <div className="flex items-center space-x-2">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
-              <span className="text-gray-600">กำลังโหลด...</span>
-            </div>
-          </div>
-        )}
-        {err && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            {err}
-          </div>
-        )}
+        {loading && <LoadingState />}
+        {err && <ErrorState err={err} />}
 
         {/* Orders */}
         <section className="space-y-4">
           {/* Desktop Table */}
-          <div className="hidden lg:block bg-white shadow-sm rounded-lg overflow-hidden">
+          <div className="hidden lg:block bg-white shadow rounded-xl overflow-hidden">
             <table className="w-full text-base">
-              <thead className="bg-gray-50 border-b">
+              <thead className="bg-gray-50 border-b text-gray-700">
                 <tr>
                   <th className="px-6 py-4 text-left">#</th>
                   <th className="px-6 py-4 text-left">โต๊ะ</th>
@@ -152,25 +141,22 @@ export default function OrderDashboard() {
                     </td>
                     <td className="px-6 py-4 text-center space-x-2">
                       {nextStatus(o.status) && (
-                        <button
+                        <ActionButton
+                          color="green"
                           onClick={() => handleAdvance(o)}
-                          className="px-3 py-1.5 bg-green-600 text-white rounded-md hover:bg-green-700"
-                        >
-                          {statusAdvanceLabel(o.status)}
-                        </button>
+                          label={statusAdvanceLabel(o.status)}
+                        />
                       )}
-                      <button
+                      <ActionButton
+                        color="red"
                         onClick={() => handleCancel(o)}
-                        className="px-3 py-1.5 bg-red-500 text-white rounded-md hover:bg-red-600"
-                      >
-                        ยกเลิก
-                      </button>
-                      <button
+                        label="ยกเลิก"
+                      />
+                      <ActionButton
+                        color="gray"
                         onClick={() => handlePrint(o)}
-                        className="px-3 py-1.5 bg-gray-600 text-white rounded-md hover:bg-gray-700"
-                      >
-                        ใบเสร็จ
-                      </button>
+                        label="ใบเสร็จ"
+                      />
                     </td>
                   </tr>
                 ))}
@@ -179,7 +165,7 @@ export default function OrderDashboard() {
           </div>
 
           {/* Mobile Cards */}
-          <div className="lg:hidden space-y-3">
+          <div className="lg:hidden space-y-4">
             {filtered.map((o) => (
               <OrderCard
                 key={o.id}
@@ -195,17 +181,7 @@ export default function OrderDashboard() {
 
           {/* Desktop empty */}
           {filtered.length === 0 && !loading && (
-            <div className="hidden lg:block p-8 bg-white shadow-sm rounded-lg text-center">
-              <div className="text-gray-400 text-5xl mb-4">📝</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                ไม่มีออเดอร์
-              </h3>
-              <p className="text-gray-500">
-                {filter === "all"
-                  ? "ยังไม่มีออเดอร์ในระบบ"
-                  : `ไม่มีออเดอร์ที่มีสถานะ "${statusLabel(filter)}"`}
-              </p>
-            </div>
+            <EmptyState className="hidden lg:block" />
           )}
         </section>
       </main>
@@ -213,7 +189,8 @@ export default function OrderDashboard() {
   );
 }
 
-// Filter panel (reused)
+/* ----------------- Components ----------------- */
+
 function FilterArea({ filter, onChange }) {
   return (
     <div className="flex flex-wrap gap-2 justify-center lg:justify-start">
@@ -249,9 +226,44 @@ function FilterButton({ label, active, onClick }) {
   );
 }
 
+function ActionButton({ color, label, onClick }) {
+  const colorMap = {
+    green: "bg-green-600 hover:bg-green-700",
+    red: "bg-red-500 hover:bg-red-600",
+    gray: "bg-gray-600 hover:bg-gray-700",
+  };
+  return (
+    <button
+      onClick={onClick}
+      className={`px-3 py-1.5 text-sm text-white rounded-md transition-colors ${colorMap[color]}`}
+    >
+      {label}
+    </button>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="flex justify-center items-center py-10">
+      <div className="flex items-center space-x-2">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
+        <span className="text-gray-600">กำลังโหลด...</span>
+      </div>
+    </div>
+  );
+}
+
+function ErrorState({ err }) {
+  return (
+    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+      {err}
+    </div>
+  );
+}
+
 function OrderCard({ order, onAdvance, onCancel, onPrint, onViewDetails }) {
   return (
-    <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+    <div className="bg-white rounded-xl shadow-md border overflow-hidden">
       <div className="px-4 py-3 bg-gray-50 border-b flex justify-between items-center">
         <button
           onClick={onViewDetails}
@@ -305,9 +317,11 @@ function OrderCard({ order, onAdvance, onCancel, onPrint, onViewDetails }) {
   );
 }
 
-function EmptyState() {
+function EmptyState({ className = "" }) {
   return (
-    <div className="p-8 bg-white shadow-sm rounded-lg text-center">
+    <div
+      className={`p-8 bg-white shadow-sm rounded-lg text-center ${className}`}
+    >
       <div className="text-gray-400 text-5xl mb-4">📝</div>
       <h3 className="text-lg font-medium text-gray-900 mb-2">ไม่มีออเดอร์</h3>
       <p className="text-gray-500">ยังไม่มีออเดอร์ในระบบ</p>
@@ -315,6 +329,7 @@ function EmptyState() {
   );
 }
 
+/* ----------------- Helpers ----------------- */
 function nextStatus(s) {
   switch (s) {
     case "pending":
@@ -360,7 +375,7 @@ function statusAdvanceLabel(s) {
 
 function statusBadge(s) {
   const base =
-    "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold";
+    "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border";
   const map = {
     pending: "🕐 bg-yellow-100 text-yellow-800 border-yellow-200",
     preparing: "👨‍🍳 bg-blue-100 text-blue-800 border-blue-200",
@@ -368,9 +383,5 @@ function statusBadge(s) {
     paid: "💰 bg-gray-100 text-gray-800 border-gray-200",
     canceled: "❌ bg-red-100 text-red-800 border-red-200",
   };
-  return (
-    <span className={`${base} ${map[s] || ""}`}>
-      {map[s]?.split(" ")[0]} {statusLabel(s)}
-    </span>
-  );
+  return <span className={`${base} ${map[s] || ""}`}>{statusLabel(s)}</span>;
 }

@@ -1,12 +1,11 @@
-# Node modules
+# Node dependencies
 node_modules/
 
 # Logs
-logs/
+logs
 *.log
-npm-debug.log*
 
-# Build and temp
+# Build / temp
 dist/
 tmp/
 coverage/
@@ -15,5 +14,7 @@ coverage/
 .env
 .env.local
 
-# Misc
+# OS / IDE
 .DS_Store
+.idea/
+.vscode/
