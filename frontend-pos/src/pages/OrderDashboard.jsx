@@ -82,105 +82,236 @@ export default function OrderDashboard() {
   };
 
   return (
-    <div className="p-4 h-screen flex flex-col">
-      <h1 className="text-2xl font-bold mb-4">ออเดอร์หน้าร้าน</h1>
-
-      {/* Filter */}
-      <div className="flex flex-wrap gap-2 mb-4">
-        <FilterButton
-          label="ทั้งหมด"
-          active={filter === "all"}
-          onClick={() => setFilter("all")}
-        />
-        {STATUS_ORDER.map((s) => (
-          <FilterButton
-            key={s}
-            label={statusLabel(s)}
-            active={filter === s}
-            onClick={() => setFilter(s)}
-          />
-        ))}
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b sticky top-0 z-10">
+        <div className="px-4 py-3 sm:px-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
+            ออเดอร์หน้าร้าน
+          </h1>
+        </div>
       </div>
 
-      {loading && <p>กำลังโหลด...</p>}
-      {err && <p className="text-red-500">{err}</p>}
-
-      {/* ตารางออเดอร์ */}
-      <div className="flex-1 overflow-y-auto">
-        <table className="w-full text-sm bg-white shadow rounded overflow-hidden">
-          <thead className="bg-gray-100 text-gray-700">
-            <tr>
-              <th className="p-2 text-left">#</th>
-              <th className="p-2 text-left">โต๊ะ</th>
-              <th className="p-2 text-right">ยอด</th>
-              <th className="p-2 text-center">สถานะ</th>
-              <th className="p-2 text-center">จัดการ</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filtered.map((o) => (
-              <tr key={o.id} className="border-t hover:bg-yellow-50">
-                <td
-                  className="p-2 cursor-pointer text-blue-600 underline"
-                  onClick={() => navigate(`/orders/${o.id}`)}
-                >
-                  {o.id}
-                </td>
-                <td className="p-2">โต๊ะ {o.table_number}</td>
-                <td className="p-2 text-right">
-                  {Number(o.total).toFixed(2)} ฿
-                </td>
-                <td className="p-2 text-center">{statusBadge(o.status)}</td>
-                <td className="p-2 text-center space-x-1">
-                  {nextStatus(o.status) && (
-                    <button
-                      onClick={() => handleAdvance(o)}
-                      className="px-2 py-1 bg-green-600 text-white rounded hover:bg-green-700"
-                    >
-                      {statusAdvanceLabel(o.status)}
-                    </button>
-                  )}
-                  <button
-                    onClick={() => handleCancel(o)}
-                    className="px-2 py-1 bg-red-500 text-white rounded hover:bg-red-600"
-                  >
-                    ยกเลิก
-                  </button>
-                  <button
-                    onClick={() => handlePrint(o)}
-                    className="px-2 py-1 bg-gray-600 text-white rounded hover:bg-gray-700"
-                  >
-                    ใบเสร็จ
-                  </button>
-                </td>
-              </tr>
+      <div className="px-4 py-4 sm:px-6">
+        {/* Filter Buttons */}
+        <div className="mb-6">
+          <div className="flex flex-wrap gap-2">
+            <FilterButton
+              label="ทั้งหมด"
+              active={filter === "all"}
+              onClick={() => setFilter("all")}
+            />
+            {STATUS_ORDER.map((s) => (
+              <FilterButton
+                key={s}
+                label={statusLabel(s)}
+                active={filter === s}
+                onClick={() => setFilter(s)}
+              />
             ))}
-            {!loading && filtered.length === 0 && (
-              <tr>
-                <td colSpan={5} className="p-4 text-center text-gray-500">
-                  ไม่มีออเดอร์
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+          </div>
+        </div>
+
+        {/* Loading & Error States */}
+        {loading && (
+          <div className="flex justify-center items-center py-8">
+            <div className="flex items-center space-x-2">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-amber-500"></div>
+              <span className="text-gray-600">กำลังโหลด...</span>
+            </div>
+          </div>
+        )}
+
+        {err && (
+          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
+            {err}
+          </div>
+        )}
+
+        {/* Orders List */}
+        <div className="space-y-4">
+          {/* Desktop Table View */}
+          <div className="hidden lg:block">
+            <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      #
+                    </th>
+                    <th className="px-6 py-4 text-left text-sm font-semibold text-gray-900">
+                      โต๊ะ
+                    </th>
+                    <th className="px-6 py-4 text-right text-sm font-semibold text-gray-900">
+                      ยอดรวม
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                      สถานะ
+                    </th>
+                    <th className="px-6 py-4 text-center text-sm font-semibold text-gray-900">
+                      จัดการ
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filtered.map((o) => (
+                    <tr
+                      key={o.id}
+                      className="hover:bg-gray-50 transition-colors"
+                    >
+                      <td
+                        className="px-6 py-4 cursor-pointer text-blue-600 hover:text-blue-800 font-medium"
+                        onClick={() => navigate(`/orders/${o.id}`)}
+                      >
+                        #{o.id}
+                      </td>
+                      <td className="px-6 py-4 text-gray-900">
+                        โต๊ะ {o.table_number}
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-gray-900">
+                        ฿{Number(o.total).toFixed(2)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {statusBadge(o.status)}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex justify-center space-x-2">
+                          {nextStatus(o.status) && (
+                            <button
+                              onClick={() => handleAdvance(o)}
+                              className="px-3 py-1.5 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                            >
+                              {statusAdvanceLabel(o.status)}
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleCancel(o)}
+                            className="px-3 py-1.5 bg-red-500 text-white text-sm rounded-md hover:bg-red-600 transition-colors"
+                          >
+                            ยกเลิก
+                          </button>
+                          <button
+                            onClick={() => handlePrint(o)}
+                            className="px-3 py-1.5 bg-gray-600 text-white text-sm rounded-md hover:bg-gray-700 transition-colors"
+                          >
+                            ใบเสร็จ
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Mobile Card View */}
+          <div className="lg:hidden space-y-3">
+            {filtered.map((o) => (
+              <OrderCard
+                key={o.id}
+                order={o}
+                onAdvance={handleAdvance}
+                onCancel={handleCancel}
+                onPrint={handlePrint}
+                onViewDetails={() => navigate(`/orders/${o.id}`)}
+              />
+            ))}
+          </div>
+
+          {/* Empty State */}
+          {!loading && filtered.length === 0 && (
+            <div className="bg-white rounded-lg shadow-sm p-8 text-center">
+              <div className="text-gray-400 text-5xl mb-4">📝</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
+                ไม่มีออเดอร์
+              </h3>
+              <p className="text-gray-500">
+                {filter === "all"
+                  ? "ยังไม่มีออเดอร์ในระบบ"
+                  : `ไม่มีออเดอร์ที่มีสถานะ "${statusLabel(filter)}"`}
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Mobile Order Card Component ---------- */
+function OrderCard({ order, onAdvance, onCancel, onPrint, onViewDetails }) {
+  return (
+    <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      {/* Card Header */}
+      <div className="px-4 py-3 bg-gray-50 border-b flex justify-between items-center">
+        <button
+          onClick={onViewDetails}
+          className="text-blue-600 hover:text-blue-800 font-semibold text-lg"
+        >
+          ออเดอร์ #{order.id}
+        </button>
+        {statusBadge(order.status)}
+      </div>
+
+      {/* Card Content */}
+      <div className="px-4 py-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-gray-600">
+            <span className="text-sm">โต๊ะ</span>
+            <span className="ml-2 text-lg font-semibold text-gray-900">
+              {order.table_number}
+            </span>
+          </div>
+          <div className="text-right">
+            <div className="text-sm text-gray-600">ยอดรวม</div>
+            <div className="text-xl font-bold text-gray-900">
+              ฿{Number(order.total).toFixed(2)}
+            </div>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className="space-y-2">
+          {nextStatus(order.status) && (
+            <button
+              onClick={() => onAdvance(order)}
+              className="w-full py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium text-base"
+            >
+              {statusAdvanceLabel(order.status)}
+            </button>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => onCancel(order)}
+              className="py-2.5 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+            >
+              ยกเลิก
+            </button>
+            <button
+              onClick={() => onPrint(order)}
+              className="py-2.5 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+            >
+              ใบเสร็จ
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
 
 /* ---------- UI Helpers ---------- */
-
 function FilterButton({ label, active, onClick }) {
   return (
     <button
       onClick={onClick}
-      className={
-        "px-3 py-1 rounded-full text-sm " +
-        (active
-          ? "bg-amber-500 text-white shadow"
-          : "bg-gray-200 text-gray-700 hover:bg-gray-300")
-      }
+      className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 ${
+        active
+          ? "bg-amber-500 text-white shadow-md transform scale-105"
+          : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-gray-400"
+      }`}
     >
       {label}
     </button>
@@ -218,29 +349,50 @@ function statusAdvanceLabel(s) {
 }
 
 function statusBadge(s) {
-  const base = "px-2 py-0.5 rounded-full text-xs font-semibold";
+  const base =
+    "inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold";
   switch (s) {
     case "pending":
       return (
-        <span className={`${base} bg-yellow-200 text-yellow-800`}>รอรับ</span>
+        <span
+          className={`${base} bg-yellow-100 text-yellow-800 border border-yellow-200`}
+        >
+          🕐 รอรับ
+        </span>
       );
     case "preparing":
       return (
-        <span className={`${base} bg-blue-200 text-blue-800`}>กำลังทำ</span>
+        <span
+          className={`${base} bg-blue-100 text-blue-800 border border-blue-200`}
+        >
+          👨‍🍳 กำลังทำ
+        </span>
       );
     case "served":
       return (
-        <span className={`${base} bg-green-200 text-green-800`}>
-          เสิร์ฟแล้ว
+        <span
+          className={`${base} bg-green-100 text-green-800 border border-green-200`}
+        >
+          ✅ เสิร์ฟแล้ว
         </span>
       );
     case "paid":
       return (
-        <span className={`${base} bg-gray-300 text-gray-800`}>จ่ายแล้ว</span>
+        <span
+          className={`${base} bg-gray-100 text-gray-800 border border-gray-200`}
+        >
+          💰 จ่ายแล้ว
+        </span>
       );
     case "canceled":
-      return <span className={`${base} bg-red-200 text-red-800`}>ยกเลิก</span>;
+      return (
+        <span
+          className={`${base} bg-red-100 text-red-800 border border-red-200`}
+        >
+          ❌ ยกเลิก
+        </span>
+      );
     default:
-      return s;
+      return <span className={`${base} bg-gray-100 text-gray-800`}>{s}</span>;
   }
 }
