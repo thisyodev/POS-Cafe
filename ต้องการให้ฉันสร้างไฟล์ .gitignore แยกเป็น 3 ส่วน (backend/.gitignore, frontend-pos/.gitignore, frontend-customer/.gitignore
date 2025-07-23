@@ -1,0 +1,22 @@
+# Root-level ignores
+node_modules/
+dist/
+build/
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*.local
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# IDE and editor folders
+.vscode/
+.idea/

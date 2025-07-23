@@ -1,0 +1,19 @@
+# Node modules
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Build and temp
+dist/
+tmp/
+coverage/
+
+# Env
+.env
+.env.local
+
+# Misc
+.DS_Store

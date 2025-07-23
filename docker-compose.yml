@@ -1,0 +1,55 @@
+services:
+  db:
+    image: mysql:8
+    restart: always
+    container_name: pos-cafe-db
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: pos_cafe
+    ports:
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: pos-cafe-phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_USER: root
+      PMA_PASSWORD: password
+    ports:
+      - "8080:80"
+    depends_on:
+      - db
+
+  backend:
+    build: ./backend
+    ports:
+      - "5000:5000"
+    environment:
+      DB_HOST: db
+      DB_USER: root
+      DB_PASSWORD: password
+      DB_NAME: pos_cafe
+      POS_URL: "http://localhost:3000"
+      CUSTOMER_URL: "http://localhost:3001"
+    depends_on:
+      - db
+
+  frontend-pos:
+    build: ./frontend-pos
+    ports:
+      - "3000:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:5000
+
+  frontend-customer:
+    build: ./frontend-customer
+    ports:
+      - "3001:3000"
+    environment:
+      REACT_APP_API_URL: http://localhost:5000
+
+volumes:
+  db_data:

@@ -1,0 +1,16 @@
+สรุปสิ่งที่แนะนำให้เช็ค/เพิ่ม
+ฟีเจอร์	ควรตรวจสอบ/เพิ่ม
+เมนู CRUD	UI ฟอร์มอัปโหลดรูปภาพ, API PUT/DELETE ครบ
+ระบบขาย	ระบบตะกร้า, ชำระเงิน, backend บันทึกออเดอร์
+พิมพ์ใบเสร็จ	สร้าง receipt PDF/HTML, รองรับ Thermal Printer
+รายงานยอดขาย	API report, Dashboard กราฟ (Chart.js)
+Self Order	QR Code, Frontend สั่งอาหาร, ดูสถานะ order
+Backend API	ครบถ้วน, JWT Auth, CORS middleware
+Frontend	POS + Customer responsive, UI สวยงาม
+Docker	รันได้ครบทุก service, config environment ถูกต้อง
+README	ครบถ้วน ชัดเจน
+
+
+เพิ่มฟีเจอร์
+พิมพ์ใบเสร็จ	สร้าง receipt PDF/HTML
+Self Order	QR Code, Frontend สั่งอาหาร, ดูสถานะ order
