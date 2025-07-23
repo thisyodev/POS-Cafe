@@ -4,7 +4,7 @@
 
 ## วิธีติดตั้ง
 ```bash
-git clone https://github.com/yourname/POS-Cafe.git
+git clone https://github.com/thisyodev/POS-Cafe.git
 cd POS-Cafe
 docker-compose up -d --build
 ```

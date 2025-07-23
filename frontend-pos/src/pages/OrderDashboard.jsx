@@ -11,6 +11,7 @@ export default function OrderDashboard() {
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState("");
 
+  // โหลดข้อมูลออเดอร์
   const loadOrders = async () => {
     setLoading(true);
     setErr("");
@@ -32,31 +33,18 @@ export default function OrderDashboard() {
     return () => clearInterval(t);
   }, []);
 
+  // กรองตามสถานะ
   const filtered = useMemo(() => {
     if (filter === "all") return orders;
     return orders.filter((o) => o.status === filter);
   }, [orders, filter]);
 
-  const nextStatus = (s) => {
-    switch (s) {
-      case "pending":
-        return "preparing";
-      case "preparing":
-        return "served";
-      case "served":
-        return "paid";
-      default:
-        return null;
-    }
-  };
-
+  // อัปเดตสถานะไปยังขั้นถัดไป
   const handleAdvance = async (order) => {
     const to = nextStatus(order.status);
     if (!to) return;
     try {
-      await api.put(`/api/order/${order.id}/status`, {
-        status: to,
-      });
+      await api.put(`/api/order/${order.id}/status`, { status: to });
       loadOrders();
     } catch (e) {
       console.error("advance status error", e);
@@ -64,12 +52,11 @@ export default function OrderDashboard() {
     }
   };
 
+  // ยกเลิกออเดอร์
   const handleCancel = async (order) => {
     if (!window.confirm(`ยกเลิกออเดอร์ #${order.id}?`)) return;
     try {
-      await api.put(`/api/order/${order.id}/status`, {
-        status: "canceled",
-      });
+      await api.put(`/api/order/${order.id}/status`, { status: "canceled" });
       loadOrders();
     } catch (e) {
       console.error("cancel error", e);
@@ -77,8 +64,12 @@ export default function OrderDashboard() {
     }
   };
 
+  // พิมพ์ใบเสร็จ
   const handlePrint = (order) => {
-    window.open(`/api/order/receipt/${order.id}`, "_blank");
+     window.open(
+       `${api.defaults.baseURL}/api/order/receipt/${order.id}`,
+       "_blank"
+     );
   };
 
   return (
@@ -316,6 +307,19 @@ function FilterButton({ label, active, onClick }) {
       {label}
     </button>
   );
+}
+
+function nextStatus(s) {
+  switch (s) {
+    case "pending":
+      return "preparing";
+    case "preparing":
+      return "served";
+    case "served":
+      return "paid";
+    default:
+      return null;
+  }
 }
 
 function statusLabel(s) {

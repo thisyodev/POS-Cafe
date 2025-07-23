@@ -47,7 +47,10 @@ export default function OrderDetail() {
   };
 
   const printReceipt = () => {
-    window.open(`${API_URL}/api/order/receipt/${orderId}`, "_blank");
+     window.open(
+       `${api.defaults.baseURL}/api/order/receipt/${orderId}`,
+       "_blank"
+     );
   };
 
   const total =
