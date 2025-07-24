@@ -10,6 +10,10 @@ on:
       - main
       - dev
 
+env:
+  DATABASE_URL: mysql://root:UkIfcHzGHVfiJdIlNSvfaxTWzTGmYzYY@centerbeam.proxy.rlwy.net:55696/railway
+  RAILWAY_DEPLOY_HOOK_URL: https://pos-cafe-production-41ef.up.railway.app/webhook/railway
+
 jobs:
   build-frontend:
     runs-on: ubuntu-latest
@@ -27,19 +31,28 @@ jobs:
           npm install
           npm run build
 
-      - name: Install and Build Customer Frontend
-        run: |
-          cd ../frontend-customer
-          npm install
-          npm run build
-
-      - name: Deploy to Vercel
+      - name: Deploy Frontend POS to Vercel
         uses: amondnet/vercel-action@v20
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
+          zeit-token: ${{ secrets.VERCEL_TOKEN }}        # ต้องใช้ zeit-token
           vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
           vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: ./frontend-pos
+          vercel-args: "--prod"
+
+      - name: Install and Build Customer Frontend
+        run: |
+          cd frontend-customer
+          npm install
+          npm run build
+
+      - name: Deploy Customer Frontend to Vercel
+        uses: amondnet/vercel-action@v20
+        with:
+          zeit-token: ${{ secrets.VERCEL_TOKEN }}        # ต้องใช้ zeit-token
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
+          working-directory: ./frontend-customer
           vercel-args: "--prod"
 
   build-backend:
@@ -60,6 +73,8 @@ jobs:
           npm run build
 
       - name: Deploy Backend to Railway
+        env:
+          RAILWAY_DEPLOY_HOOK_URL: ${{ env.RAILWAY_DEPLOY_HOOK_URL }}
         run: |
           curl -s "$RAILWAY_DEPLOY_HOOK_URL"
 
@@ -68,10 +83,11 @@ jobs:
     needs: build-backend
     steps:
       - uses: actions/checkout@v3
+
       - name: Run DB Migration + Seed
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
         run: |
           cd backend
           npm run migrate
           npm run seed
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
