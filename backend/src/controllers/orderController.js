@@ -1,11 +1,11 @@
-import pool from '../config/db.js';
+import db from '../config/db.js';
 import PDFDocument from 'pdfkit';
 
 export const getOrders = async (req, res) => {
     try {
-        const [orders] = await pool.query('SELECT * FROM orders ORDER BY created_at DESC');
+        const [orders] = await db.query('SELECT * FROM orders ORDER BY created_at DESC');
         for (const order of orders) {
-            const [items] = await pool.query('SELECT * FROM order_items WHERE order_id = ?', [order.id]);
+            const [items] = await db.query('SELECT * FROM order_items WHERE order_id = ?', [order.id]);
             order.items = items;
         }
         res.json(orders);
@@ -18,11 +18,11 @@ export const getOrders = async (req, res) => {
 export const getOrderById = async (req, res) => {
     const { id } = req.params;
     try {
-        const [orders] = await pool.query('SELECT * FROM orders WHERE id = ?', [id]);
+        const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [id]);
         if (orders.length === 0) return res.status(404).json({ error: 'Order not found' });
 
         const order = orders[0];
-        const [items] = await pool.query(`
+        const [items] = await db.query(`
       SELECT oi.id, oi.quantity AS qty, m.name, m.price
       FROM order_items oi
       JOIN menus m ON oi.menu_id = m.id
@@ -44,14 +44,14 @@ export const createOrder = async (req, res) => {
     }
 
     try {
-        const [result] = await pool.query(
+        const [result] = await db.query(
             'INSERT INTO orders (table_number, total, status) VALUES (?, ?, ?)',
             [tableNumber, total, 'pending']
         );
         const orderId = result.insertId;
 
         for (const item of items) {
-            await pool.query(
+            await db.query(
                 'INSERT INTO order_items (order_id, menu_id, quantity, price) VALUES (?, ?, ?, ?)',
                 [orderId, item.menu_id, item.quantity, item.price] // ต้องส่ง price มาด้วย
             );
@@ -67,7 +67,7 @@ export const createOrder = async (req, res) => {
 export const updateOrderStatus = async (req, res) => {
     const { status } = req.body;
     try {
-        await pool.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
+        await db.query('UPDATE orders SET status = ? WHERE id = ?', [status, req.params.id]);
         res.json({ message: 'Order status updated' });
     } catch (err) {
         console.error("updateOrderStatus error:", err);
@@ -78,11 +78,11 @@ export const updateOrderStatus = async (req, res) => {
 export const generateReceiptPDF = async (req, res) => {
     const { id } = req.params;
     try {
-        const [orders] = await pool.query('SELECT * FROM orders WHERE id = ?', [id]);
+        const [orders] = await db.query('SELECT * FROM orders WHERE id = ?', [id]);
         if (orders.length === 0) return res.status(404).send('Order not found');
 
         const order = orders[0];
-        const [items] = await pool.query(`
+        const [items] = await db.query(`
       SELECT oi.quantity AS qty, oi.price, m.name
       FROM order_items oi
       JOIN menus m ON oi.menu_id = m.id
@@ -136,14 +136,14 @@ export const checkoutOrder = async (req, res) => {
             return res.status(400).json({ error: 'ต้องมีรายการสินค้า' });
         }
 
-        const [result] = await pool.query(
+        const [result] = await db.query(
             'INSERT INTO orders (table_number, total, status) VALUES (?, ?, ?)',
             [table, total, 'paid'] // Checkout แล้ว ถือว่าชำระเงินทันที
         );
         const orderId = result.insertId;
 
         for (const item of items) {
-            await pool.query(
+            await db.query(
                 'INSERT INTO order_items (order_id, menu_id, quantity, price) VALUES (?, ?, ?, ?)',
                 [orderId, item.id || item.menu_id, item.quantity || item.qty, item.price]
             );
