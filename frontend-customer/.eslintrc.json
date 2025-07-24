@@ -1,5 +1,5 @@
 {
-  "extends": ["react-app"],
+  "extends": ["react-app", "react-app/jest"],
   "plugins": ["react-hooks"],
   "rules": {
     "react-hooks/exhaustive-deps": "warn"
