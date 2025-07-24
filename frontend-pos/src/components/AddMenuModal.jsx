@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createMenu } from "../api";
+import api from "../services/api";
 
 export default function AddMenuModal({ isOpen, onClose, onAdded }) {
   const [formData, setFormData] = useState({
