@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import { createMenu } from "../api";
 
 export default function AddMenuModal({ isOpen, onClose, onAdded }) {

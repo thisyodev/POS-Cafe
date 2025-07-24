@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import TableQRCode from "../components/TableQRCode";
 
 export default function TableQRCodePage() {
