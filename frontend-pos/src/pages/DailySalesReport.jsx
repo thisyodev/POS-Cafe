@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import axios from "axios";
 import api from "../services/api";
 
 
@@ -17,7 +16,7 @@ export default function DailySalesReport() {
         setReport(resReport.data);
 
         // โหลดออเดอร์ล่าสุด 5 รายการ
-        const resOrders = await axios.get(`/api/order?limit=5`);
+        const resOrders = await api.get(`/api/order?limit=5`);
         setLatestOrders(resOrders.data || []);
       } catch (e) {
         console.error(e);
