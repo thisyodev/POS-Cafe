@@ -1,6 +1,6 @@
 // POS-Cafe/frontend-pos/src/pages/Login.jsx
 import React, { useState } from "react";
-import axios from "axios";
+import api from "../services/api";
 import { useNavigate } from "react-router-dom";
 
 const API_URL = process.env.REACT_APP_API_URL || "http://localhost:5000";
@@ -17,7 +17,7 @@ export default function Login() {
     setLoading(true);
     setError("");
     try {
-      const res = await axios.post(`${API_URL}/api/auth/login`, {
+      const res = await api.post(`/api/auth/login`, {
         username,
         password,
       });

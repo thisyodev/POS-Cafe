@@ -1,8 +1,9 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
 export default function Layout({ children }) {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const navLinks = [
     { to: "/", label: "POS" },
@@ -10,6 +11,16 @@ export default function Layout({ children }) {
     { to: "/report/daily-sales", label: "Reports" },
     { to: "/table-qrcode", label: "QR Tables" },
   ];
+
+  const handleLogout = () => {
+    if (window.confirm("ต้องการออกจากระบบหรือไม่?")) {
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      navigate("/login");
+    }
+  };
+
+  const user = JSON.parse(localStorage.getItem("user") || "{}");
 
   return (
     <div className="flex h-screen bg-gray-100">
@@ -31,19 +42,27 @@ export default function Layout({ children }) {
             </Link>
           ))}
         </nav>
+        <div className="p-4 border-t">
+          <button
+            onClick={handleLogout}
+            className="w-full bg-red-500 text-white py-2 rounded hover:bg-red-600 transition"
+          >
+            ออกจากระบบ
+          </button>
+        </div>
       </aside>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col">
-        {/* Navbar */}
         <header className="bg-white shadow p-4 flex justify-between items-center">
           <h1 className="text-lg font-bold text-gray-700">
             {getPageTitle(location.pathname)}
           </h1>
-          <span className="text-sm text-gray-500">พนักงาน: Admin</span>
+          <span className="text-sm text-gray-500">
+            พนักงาน: {user?.username || "Admin"}
+          </span>
         </header>
 
-        {/* Content */}
         <main className="flex-1 overflow-y-auto p-4">{children}</main>
       </div>
     </div>

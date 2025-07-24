@@ -3,11 +3,5 @@ import { Navigate } from "react-router-dom";
 
 export default function ProtectedRoute({ children }) {
   const token = localStorage.getItem("token");
-
-  // ถ้าไม่มี token ให้กลับไปหน้า login
-  if (!token) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
+  return token ? children : <Navigate to="/login" />;
 }
