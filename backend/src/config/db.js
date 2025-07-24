@@ -1,28 +1,23 @@
 import mysql from 'mysql2/promise';
+import dotenv from 'dotenv';
 
-let config;
+// Load .env for local dev
+dotenv.config();
 
-if (process.env.DATABASE_URL) {
-  const dbUrl = new URL(process.env.DATABASE_URL);
-  config = {
-    host: dbUrl.hostname,
-    user: dbUrl.username,
-    password: dbUrl.password,
-    database: dbUrl.pathname.replace('/', ''),
-    port: dbUrl.port,
-  };
-} else {
-  config = {
-    host: process.env.DB_HOST || 'localhost',
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASS || '',
-    database: process.env.DB_NAME || 'test',
-    port: process.env.DB_PORT || 3306,
-  };
+const DATABASE_URL = process.env.DATABASE_URL || ''; // fallback to empty string
+
+if (!DATABASE_URL) {
+  throw new Error('DATABASE_URL environment variable is not set.');
 }
 
+const dbUrl = new URL(DATABASE_URL);
+
 const pool = mysql.createPool({
-  ...config,
+  host: dbUrl.hostname,
+  user: dbUrl.username,
+  password: dbUrl.password,
+  database: dbUrl.pathname.replace(/^\//, ''),
+  port: dbUrl.port || 3306,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0,

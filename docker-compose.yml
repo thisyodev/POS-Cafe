@@ -27,15 +27,14 @@ services:
     build: ./backend
     ports:
       - "5000:5000"
+    # env_file:
+    # - ./backend/.env
     environment:
-      DB_HOST: db
-      DB_USER: root
-      DB_PASSWORD: password
-      DB_NAME: pos_cafe
+      DATABASE_URL: ${DATABASE_URL}
       POS_URL: "http://localhost:3000"
       CUSTOMER_URL: "http://localhost:3001"
-    depends_on:
-      - db
+    # depends_on:
+    #   - db # หรือถ้าไม่ใช้ local db ให้เอา depends_on ออก
 
   frontend-pos:
     build: ./frontend-pos
