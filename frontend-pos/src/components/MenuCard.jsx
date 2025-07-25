@@ -13,6 +13,13 @@ export default function MenuCard({ menu, onAdd, className = "" }) {
           alt={menu.name}
           className="h-32 sm:h-40 w-full object-cover transition-transform duration-300 hover:scale-110"
           loading="lazy"
+          onError={(e) => {
+            e.target.onerror = null;
+            e.target.src = `https://placehold.co/300x200/E0E0E0/616161?text=${menu.name.substring(
+              0,
+              5
+            )}`;
+          }}
         />
         <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm rounded-full px-2 py-1">
           <span className="text-xs font-medium text-gray-700">

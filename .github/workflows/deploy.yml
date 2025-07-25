@@ -1,90 +1,39 @@
-name: POS-Cafe CI/CD
+name: Backend Deploy Only
 
 on:
   push:
     branches:
       - main
-      - dev
-  pull_request:
-    branches:
-      - main
-      - dev
+  workflow_dispatch:
 
 env:
   DATABASE_URL: mysql://root:UkIfcHzGHVfiJdIlNSvfaxTWzTGmYzYY@centerbeam.proxy.rlwy.net:55696/railway
   RAILWAY_DEPLOY_HOOK_URL: https://pos-cafe-production-41ef.up.railway.app/webhook/railway
 
 jobs:
-  build-frontend:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '18'
-
-      - name: Install and Build Frontend POS
-        run: |
-          cd frontend-pos
-          npm install
-          npm run build
-
-      - name: Deploy Frontend POS to Vercel
-        uses: amondnet/vercel-action@v20
-        with:
-          zeit-token: ${{ secrets.VERCEL_TOKEN }}        # ต้องใช้ zeit-token
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: ./frontend-pos
-          vercel-args: "--prod"
-
-      - name: Install and Build Customer Frontend
-        run: |
-          cd frontend-customer
-          npm install
-          npm run build
-
-      - name: Deploy Customer Frontend to Vercel
-        uses: amondnet/vercel-action@v20
-        with:
-          zeit-token: ${{ secrets.VERCEL_TOKEN }}        # ต้องใช้ zeit-token
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID_CUSTOMER }}
-          working-directory: ./frontend-customer
-          vercel-args: "--prod"
-
   build-backend:
     runs-on: ubuntu-latest
-    needs: build-frontend
     steps:
       - uses: actions/checkout@v3
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - uses: actions/setup-node@v3
         with:
           node-version: '18'
 
-      - name: Install Backend Dependencies
+      - name: Build & Deploy
         run: |
           cd backend
           npm install
           npm run build
 
-      - name: Deploy Backend to Railway
-        env:
-          RAILWAY_DEPLOY_HOOK_URL: ${{ env.RAILWAY_DEPLOY_HOOK_URL }}
-        run: |
-          curl -s "$RAILWAY_DEPLOY_HOOK_URL"
+      - name: Deploy to Railway
+        run: curl -s "$RAILWAY_DEPLOY_HOOK_URL"
 
   migrate-seed:
     runs-on: ubuntu-latest
     needs: build-backend
     steps:
       - uses: actions/checkout@v3
-
-      - name: Run DB Migration + Seed
+      - name: Migrate & Seed
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
         run: |

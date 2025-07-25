@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from "react";
-import axios from "axios";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import MenuCard from "../components/MenuCard";
 import AddMenuModal from "../components/AddMenuModal";
+import ToastMessage from "../components/ToastMessage";
 import api, { API_URL } from "../services/api";
 
 /* eslint-disable react-hooks/exhaustive-deps */
@@ -13,34 +13,34 @@ export default function POS() {
   const [cart, setCart] = useState([]);
   const [showAdd, setShowAdd] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [errMsg, setErrMsg] = useState("");
+  const [toast, setToast] = useState({ message: "", type: "" }); // For toast messages
   const [payMethod, setPayMethod] = useState("cash");
   const [lastOrderId, setLastOrderId] = useState(null);
 
   // Mobile UI States
-  const [showCart, setShowCart] = useState(false);
-  const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [activeView, setActiveView] = useState("menu"); // menu | cart
+  const [showMobileMenuDropdown, setShowMobileMenuDropdown] = useState(false); // Renamed for clarity
 
   // Load menus from backend
-  const loadMenus = async () => {
+  const loadMenus = useCallback(async () => {
     setLoading(true);
-    setErrMsg("");
+    setToast({ message: "", type: "" }); // Clear previous toasts
     try {
       const params = search.trim() ? { q: search.trim() } : undefined;
       const res = await api.get(`/api/menu`, { params });
       setMenus(res.data);
+      setToast({ message: "เมนูโหลดสำเร็จ!", type: "success" });
     } catch (err) {
       console.error("loadMenus error", err);
-      setErrMsg("โหลดเมนูไม่สำเร็จ");
+      setToast({ message: "โหลดเมนูไม่สำเร็จ", type: "error" });
     } finally {
       setLoading(false);
     }
-  };
+  }, [search]); // Depend on search to re-run when search query changes
 
   useEffect(() => {
     loadMenus();
-  }, []);
+  }, [loadMenus]); // Re-run when loadMenus callback changes
 
   // Filter menus
   const filteredMenus = useMemo(() => {
@@ -62,9 +62,14 @@ export default function POS() {
     // Show success feedback
     const button = document.querySelector(`[data-menu-id="${menu.id}"]`);
     if (button) {
-      button.classList.add("animate-pulse");
-      setTimeout(() => button.classList.remove("animate-pulse"), 300);
+      button.classList.add("ring-4", "ring-purple-300", "animate-pulse");
+      setTimeout(
+        () =>
+          button.classList.remove("ring-4", "ring-purple-300", "animate-pulse"),
+        300
+      );
     }
+    setToast({ message: `${menu.name} เพิ่มลงตะกร้าแล้ว!`, type: "success" });
   };
 
   const increaseQty = (item) => {
@@ -85,12 +90,13 @@ export default function POS() {
 
   const removeItem = (id) => {
     setCart((c) => c.filter((i) => i.id !== id));
+    setToast({ message: "สินค้านำออกจากตะกร้าแล้ว", type: "success" });
   };
 
   const clearCart = () => {
     setCart([]);
-    setShowCart(false);
-    setActiveView("menu");
+    setActiveView("menu"); // Always switch back to menu view on clear
+    setToast({ message: "ตะกร้าสินค้าถูกล้างแล้ว", type: "success" });
   };
 
   // Calculations
@@ -102,7 +108,10 @@ export default function POS() {
 
   // Checkout function
   const checkout = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0) {
+      setToast({ message: "ตะกร้าสินค้าว่างเปล่า", type: "error" });
+      return;
+    }
 
     setLoading(true);
     try {
@@ -116,19 +125,8 @@ export default function POS() {
         total: Number(cartTotal),
       });
 
-      // Success animation
-      const successDiv = document.createElement("div");
-      successDiv.className =
-        "fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50 transform transition-all duration-500";
-      successDiv.textContent = "✅ ชำระเงินสำเร็จ!";
-      document.body.appendChild(successDiv);
-
-      setTimeout(() => {
-        successDiv.style.transform = "translateX(100%)";
-        setTimeout(() => document.body.removeChild(successDiv), 500);
-      }, 2000);
-
-      clearCart();
+      setToast({ message: "ชำระเงินสำเร็จ!", type: "success" });
+      clearCart(); // Clear cart after successful checkout
 
       const orderId = res.data.orderId;
       setLastOrderId(orderId);
@@ -138,20 +136,27 @@ export default function POS() {
       );
     } catch (err) {
       console.error("checkout error", err);
-      alert("ชำระเงินล้มเหลว");
+      setToast({ message: "ชำระเงินล้มเหลว", type: "error" });
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 font-inter antialiased">
+      {/* Toast Message Display */}
+      <ToastMessage
+        message={toast.message}
+        type={toast.type}
+        onClose={() => setToast({ message: "", type: "" })}
+      />
+
       {/* Mobile Navigation Header */}
       <div className="lg:hidden bg-white shadow-lg border-b sticky top-0 z-40">
         <div className="px-4 py-3">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center">
+              <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl flex items-center justify-center shadow-md">
                 <span className="text-white font-bold text-lg">☕</span>
               </div>
               <div>
@@ -162,11 +167,15 @@ export default function POS() {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="p-2.5 rounded-xl hover:bg-gray-100 transition-colors"
+                onClick={() =>
+                  setShowMobileMenuDropdown(!showMobileMenuDropdown)
+                }
+                className="p-2.5 rounded-xl hover:bg-gray-100 transition-colors focus:outline-none focus:ring-2 focus:ring-purple-200"
+                aria-expanded={showMobileMenuDropdown}
+                aria-controls="mobile-menu-dropdown"
               >
                 <svg
-                  className="w-6 h-6"
+                  className="w-6 h-6 text-gray-700"
                   fill="none"
                   stroke="currentColor"
                   viewBox="0 0 24 24"
@@ -186,7 +195,7 @@ export default function POS() {
           <div className="flex bg-gray-100 rounded-2xl p-1">
             <button
               onClick={() => setActiveView("menu")}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 ${
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-purple-200 ${
                 activeView === "menu"
                   ? "bg-white text-purple-600 shadow-sm"
                   : "text-gray-600 hover:text-gray-800"
@@ -196,7 +205,7 @@ export default function POS() {
             </button>
             <button
               onClick={() => setActiveView("cart")}
-              className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 relative ${
+              className={`flex-1 py-3 px-4 rounded-xl font-semibold text-sm transition-all duration-200 relative focus:outline-none focus:ring-2 focus:ring-purple-200 ${
                 activeView === "cart"
                   ? "bg-white text-purple-600 shadow-sm"
                   : "text-gray-600 hover:text-gray-800"
@@ -204,7 +213,7 @@ export default function POS() {
             >
               🛒 ตะกร้า ({cartItemsCount})
               {cartItemsCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center font-bold animate-bounce-once">
                   {cartItemsCount > 99 ? "99+" : cartItemsCount}
                 </span>
               )}
@@ -213,23 +222,26 @@ export default function POS() {
         </div>
 
         {/* Mobile Menu Dropdown */}
-        {showMobileMenu && (
-          <div className="border-t bg-white px-4 py-4 space-y-3 shadow-lg">
+        {showMobileMenuDropdown && (
+          <div
+            id="mobile-menu-dropdown"
+            className="border-t bg-white px-4 py-4 space-y-3 shadow-lg animate-fade-in-down"
+          >
             <button
               onClick={() => {
                 setShowAdd(true);
-                setShowMobileMenu(false);
+                setShowMobileMenuDropdown(false);
               }}
-              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all font-semibold shadow-md"
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all font-semibold shadow-md flex items-center justify-center gap-2"
             >
               ➕ เพิ่มเมนูใหม่
             </button>
             <button
               onClick={() => {
                 loadMenus();
-                setShowMobileMenu(false);
+                setShowMobileMenuDropdown(false);
               }}
-              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all font-semibold shadow-md"
+              className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all font-semibold shadow-md flex items-center justify-center gap-2"
             >
               🔄 รีเฟรชเมนู
             </button>
@@ -237,9 +249,9 @@ export default function POS() {
               <button
                 onClick={() => {
                   clearCart();
-                  setShowMobileMenu(false);
+                  setShowMobileMenuDropdown(false);
                 }}
-                className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 transition-all font-semibold shadow-md"
+                className="w-full px-4 py-3 rounded-xl bg-gradient-to-r from-red-500 to-red-600 text-white hover:from-red-600 hover:to-red-700 transition-all font-semibold shadow-md flex items-center justify-center gap-2"
               >
                 🗑️ ล้างตะกร้า
               </button>
@@ -249,8 +261,12 @@ export default function POS() {
       </div>
 
       <div className="flex flex-col lg:flex-row min-h-screen">
-        {/* Main Content Area */}
-        <div className="flex-1 overflow-hidden">
+        {/* Main Content Area (Menu View) */}
+        <div
+          className={`flex-1 overflow-hidden ${
+            activeView === "menu" ? "block" : "hidden lg:block"
+          }`}
+        >
           {/* Desktop Header */}
           <div className="hidden lg:block bg-white shadow-sm border-b">
             <div className="px-8 py-6">
@@ -270,10 +286,10 @@ export default function POS() {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-3 rounded-2xl">
+                  <div className="bg-gradient-to-r from-purple-100 to-pink-100 px-6 py-3 rounded-2xl shadow-md">
                     <div className="text-sm text-gray-600">ยอดรวมวันนี้</div>
                     <div className="text-2xl font-bold text-purple-600">
-                      ฿0.00
+                      ฿0.00 {/* This would typically come from a backend API */}
                     </div>
                   </div>
                 </div>
@@ -281,170 +297,149 @@ export default function POS() {
             </div>
           </div>
 
-          {/* Menu View */}
-          <div
-            className={`${
-              activeView === "menu" ? "block" : "hidden lg:block"
-            } h-full`}
-          >
-            <div className="p-4 lg:p-8 h-full flex flex-col">
-              {/* Search and Controls */}
-              <div className="mb-6">
-                <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
-                  <div className="relative flex-1">
-                    <input
-                      type="text"
-                      placeholder="🔍 ค้นหาเมนูที่ต้องการ..."
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      className="w-full border-2 border-gray-200 rounded-2xl px-6 py-4 pr-12 focus:ring-4 focus:ring-purple-100 focus:border-purple-400 transition-all text-base bg-white shadow-sm"
-                    />
-                    <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
-                      {search ? (
-                        <button
-                          onClick={() => setSearch("")}
-                          className="w-6 h-6 text-gray-400 hover:text-gray-600 transition-colors"
-                        >
-                          ✕
-                        </button>
-                      ) : (
-                        <svg
-                          className="w-6 h-6 text-gray-400"
-                          fill="none"
-                          stroke="currentColor"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            strokeWidth={2}
-                            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                          />
-                        </svg>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="hidden lg:flex gap-3">
-                    <button
-                      onClick={loadMenus}
-                      disabled={loading}
-                      className="px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all font-semibold shadow-lg disabled:opacity-50 min-w-[140px] flex items-center justify-center gap-2"
-                    >
-                      {loading ? (
-                        <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                      ) : (
-                        "🔄 รีเฟรช"
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setShowAdd(true)}
-                      className="px-6 py-4 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all font-semibold shadow-lg min-w-[140px]"
-                    >
-                      ➕ เพิ่มเมนู
-                    </button>
-                  </div>
-                </div>
-
-                {/* Quick Stats */}
-                <div className="mt-4 flex gap-4 text-sm">
-                  <div className="bg-white px-4 py-2 rounded-xl shadow-sm border">
-                    <span className="text-gray-600">เมนูทั้งหมด: </span>
-                    <span className="font-semibold text-purple-600">
-                      {menus.length}
-                    </span>
-                  </div>
-                  {search && (
-                    <div className="bg-white px-4 py-2 rounded-xl shadow-sm border">
-                      <span className="text-gray-600">ผลการค้นหา: </span>
-                      <span className="font-semibold text-blue-600">
-                        {filteredMenus.length}
-                      </span>
-                    </div>
-                  )}
-                  {cart.length > 0 && (
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2 rounded-xl shadow-sm border border-purple-200">
-                      <span className="text-purple-600 font-semibold">
-                        ตะกร้า: {cartItemsCount} รายการ
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Loading State */}
-              {loading && (
-                <div className="flex items-center justify-center py-16">
-                  <div className="bg-white rounded-2xl p-8 shadow-lg">
-                    <div className="flex items-center gap-4">
-                      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-                      <p className="text-purple-800 font-semibold text-lg">
-                        กำลังโหลดเมนู...
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Error State */}
-              {errMsg && (
-                <div className="mb-6 p-6 bg-gradient-to-r from-red-50 to-red-100 border border-red-200 rounded-2xl shadow-sm">
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">⚠️</span>
-                    <div>
-                      <p className="text-red-800 font-semibold">
-                        เกิดข้อผิดพลาด
-                      </p>
-                      <p className="text-red-600">{errMsg}</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Menu Grid */}
-              <div className="flex-1 overflow-y-auto">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-6 pb-20 lg:pb-6">
-                  {filteredMenus.map((menu) => (
-                    <div key={menu.id} data-menu-id={menu.id}>
-                      <MenuCard
-                        menu={menu}
-                        onAdd={() => addToCart(menu)}
-                        className="transform hover:scale-105 transition-all duration-300 hover:shadow-xl"
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Empty State */}
-                {filteredMenus.length === 0 && !loading && (
-                  <div className="text-center py-16">
-                    <div className="text-8xl mb-6">🍽️</div>
-                    <h3 className="text-2xl font-bold text-gray-700 mb-3">
-                      {search ? "ไม่พบเมนูที่ค้นหา" : "ยังไม่มีเมนู"}
-                    </h3>
-                    <p className="text-gray-500 text-lg mb-6">
-                      {search
-                        ? `ลองค้นหาด้วยคำอื่น หรือดูเมนูทั้งหมด`
-                        : "เริ่มต้นโดยการเพิ่มเมนูแรกของคุณ"}
-                    </p>
+          <div className="p-4 lg:p-8 h-full flex flex-col">
+            {/* Search and Controls */}
+            <div className="mb-6">
+              <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    placeholder="🔍 ค้นหาเมนูที่ต้องการ..."
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    className="w-full border-2 border-gray-200 rounded-2xl px-6 py-4 pr-12 focus:ring-4 focus:ring-purple-100 focus:border-purple-400 transition-all text-base bg-white shadow-sm"
+                  />
+                  <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                     {search ? (
                       <button
                         onClick={() => setSearch("")}
-                        className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg"
+                        className="w-6 h-6 text-gray-400 hover:text-gray-600 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-200 rounded-full"
+                        aria-label="Clear search"
                       >
-                        ดูเมนูทั้งหมด
+                        ✕
                       </button>
                     ) : (
-                      <button
-                        onClick={() => setShowAdd(true)}
-                        className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg"
+                      <svg
+                        className="w-6 h-6 text-gray-400"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
                       >
-                        ➕ เพิ่มเมนูแรก
-                      </button>
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+                        />
+                      </svg>
                     )}
+                  </div>
+                </div>
+
+                <div className="hidden lg:flex gap-3">
+                  <button
+                    onClick={loadMenus}
+                    disabled={loading}
+                    className="px-6 py-4 rounded-2xl bg-gradient-to-r from-blue-500 to-blue-600 text-white hover:from-blue-600 hover:to-blue-700 transition-all font-semibold shadow-lg disabled:opacity-50 min-w-[140px] flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-blue-200"
+                  >
+                    {loading ? (
+                      <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    ) : (
+                      "🔄 รีเฟรช"
+                    )}
+                  </button>
+                  <button
+                    onClick={() => setShowAdd(true)}
+                    className="px-6 py-4 rounded-2xl bg-gradient-to-r from-green-500 to-green-600 text-white hover:from-green-600 hover:to-green-700 transition-all font-semibold shadow-lg min-w-[140px] focus:outline-none focus:ring-2 focus:ring-green-200"
+                  >
+                    ➕ เพิ่มเมนู
+                  </button>
+                </div>
+              </div>
+
+              {/* Quick Stats */}
+              <div className="mt-4 flex flex-wrap gap-4 text-sm">
+                <div className="bg-white px-4 py-2 rounded-xl shadow-sm border">
+                  <span className="text-gray-600">เมนูทั้งหมด: </span>
+                  <span className="font-semibold text-purple-600">
+                    {menus.length}
+                  </span>
+                </div>
+                {search && (
+                  <div className="bg-white px-4 py-2 rounded-xl shadow-sm border">
+                    <span className="text-gray-600">ผลการค้นหา: </span>
+                    <span className="font-semibold text-blue-600">
+                      {filteredMenus.length}
+                    </span>
+                  </div>
+                )}
+                {cart.length > 0 && (
+                  <div className="bg-gradient-to-r from-purple-50 to-pink-50 px-4 py-2 rounded-xl shadow-sm border border-purple-200">
+                    <span className="text-purple-600 font-semibold">
+                      ตะกร้า: {cartItemsCount} รายการ
+                    </span>
                   </div>
                 )}
               </div>
+            </div>
+
+            {/* Loading State */}
+            {loading && (
+              <div className="flex items-center justify-center py-16">
+                <div className="bg-white rounded-2xl p-8 shadow-lg">
+                  <div className="flex items-center gap-4">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                    <p className="text-purple-800 font-semibold text-lg">
+                      กำลังโหลดเมนู...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Menu Grid */}
+            <div className="flex-1 overflow-y-auto custom-scrollbar">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-4 lg:gap-6 pb-20 lg:pb-6">
+                {filteredMenus.map((menu) => (
+                  <div key={menu.id} data-menu-id={menu.id}>
+                    <MenuCard
+                      menu={menu}
+                      onAdd={() => addToCart(menu)}
+                      className="transform hover:scale-105 transition-all duration-300 hover:shadow-xl"
+                    />
+                  </div>
+                ))}
+              </div>
+
+              {/* Empty State */}
+              {filteredMenus.length === 0 && !loading && (
+                <div className="text-center py-16">
+                  <div className="text-8xl mb-6">🍽️</div>
+                  <h3 className="text-2xl font-bold text-gray-700 mb-3">
+                    {search ? "ไม่พบเมนูที่ค้นหา" : "ยังไม่มีเมนู"}
+                  </h3>
+                  <p className="text-gray-500 text-lg mb-6">
+                    {search
+                      ? `ลองค้นหาด้วยคำอื่น หรือดูเมนูทั้งหมด`
+                      : "เริ่มต้นโดยการเพิ่มเมนูแรกของคุณ"}
+                  </p>
+                  {search ? (
+                    <button
+                      onClick={() => setSearch("")}
+                      className="px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-2xl hover:from-blue-600 hover:to-blue-700 transition-all shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-200"
+                    >
+                      ดูเมนูทั้งหมด
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => setShowAdd(true)}
+                      className="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 text-white rounded-2xl hover:from-green-600 hover:to-green-700 transition-all shadow-lg focus:outline-none focus:ring-2 focus:ring-green-200"
+                    >
+                      ➕ เพิ่มเมนูแรก
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -471,7 +466,7 @@ export default function POS() {
         <div
           className={`lg:hidden ${
             activeView === "cart" ? "block" : "hidden"
-          } h-screen bg-white`}
+          } h-full w-full bg-white flex flex-col`} // Ensure it takes full height and is a flex column
         >
           <CartSection
             cart={cart}
@@ -496,6 +491,7 @@ export default function POS() {
         isOpen={showAdd}
         onClose={() => setShowAdd(false)}
         onAdded={loadMenus}
+        setToast={setToast} // Pass setToast to AddMenuModal
       />
 
       {/* Mobile Floating Action Button */}
@@ -503,7 +499,8 @@ export default function POS() {
         {activeView === "menu" && cart.length > 0 && (
           <button
             onClick={() => setActiveView("cart")}
-            className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-110 flex items-center justify-center relative"
+            className="w-16 h-16 bg-gradient-to-r from-purple-600 to-pink-600 text-white rounded-2xl shadow-2xl hover:shadow-3xl transition-all transform hover:scale-110 flex items-center justify-center relative focus:outline-none focus:ring-4 focus:ring-purple-300"
+            aria-label={`View cart with ${cartItemsCount} items`}
           >
             <svg
               className="w-8 h-8"
@@ -518,7 +515,7 @@ export default function POS() {
                 d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17M17 13v6a2 2 0 01-2 2H9a2 2 0 01-2-2v-6m8 0V9a2 2 0 00-2-2H9a2 2 0 00-2 2v4.01"
               />
             </svg>
-            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold">
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold animate-bounce-once">
               {cartItemsCount > 99 ? "99+" : cartItemsCount}
             </span>
           </button>
@@ -547,7 +544,7 @@ function CartSection({
   return (
     <div className="flex flex-col h-full">
       {/* Cart Header */}
-      <div className="p-6 bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 text-white">
+      <div className="p-6 bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 text-white shadow-lg">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-bold">🛒 ตะกร้าสินค้า</h2>
@@ -558,8 +555,9 @@ function CartSection({
           {cart.length > 0 && (
             <button
               onClick={clearCart}
-              className="p-2 hover:bg-purple-700 rounded-xl transition-colors"
+              className="p-2 hover:bg-purple-700 rounded-xl transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300"
               title="ล้างตะกร้า"
+              aria-label="Clear cart"
             >
               <svg
                 className="w-6 h-6"
@@ -580,7 +578,7 @@ function CartSection({
       </div>
 
       {/* Cart Items */}
-      <div className="flex-1 overflow-y-auto p-4">
+      <div className="flex-1 overflow-y-auto p-4 custom-scrollbar">
         {cart.length === 0 ? (
           <div className="text-center py-12">
             <div className="text-gray-300 mb-6">
@@ -616,8 +614,9 @@ function CartSection({
                   </h3>
                   <button
                     onClick={() => removeItem(item.id)}
-                    className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded-xl transition-all"
+                    className="text-red-500 hover:text-red-700 p-1.5 hover:bg-red-50 rounded-xl transition-all focus:outline-none focus:ring-2 focus:ring-red-200"
                     title="ลบออก"
+                    aria-label={`Remove ${item.name} from cart`}
                   >
                     <svg
                       className="w-5 h-5"
@@ -639,7 +638,8 @@ function CartSection({
                   <div className="flex items-center gap-3">
                     <button
                       onClick={() => decreaseQty(item)}
-                      className="w-10 h-10 rounded-2xl bg-white border-2 border-gray-200 hover:border-red-300 hover:bg-red-50 flex items-center justify-center transition-all text-lg font-bold text-gray-600 hover:text-red-600"
+                      className="w-10 h-10 rounded-2xl bg-white border-2 border-gray-200 hover:border-red-300 hover:bg-red-50 flex items-center justify-center transition-all text-lg font-bold text-gray-600 hover:text-red-600 focus:outline-none focus:ring-2 focus:ring-red-200"
+                      aria-label={`Decrease quantity of ${item.name}`}
                     >
                       −
                     </button>
@@ -648,7 +648,8 @@ function CartSection({
                     </span>
                     <button
                       onClick={() => increaseQty(item)}
-                      className="w-10 h-10 rounded-2xl bg-white border-2 border-gray-200 hover:border-green-300 hover:bg-green-50 flex items-center justify-center transition-all text-lg font-bold text-gray-600 hover:text-green-600"
+                      className="w-10 h-10 rounded-2xl bg-white border-2 border-gray-200 hover:border-green-300 hover:bg-green-50 flex items-center justify-center transition-all text-lg font-bold text-gray-600 hover:text-green-600 focus:outline-none focus:ring-2 focus:ring-green-200"
+                      aria-label={`Increase quantity of ${item.name}`}
                     >
                       +
                     </button>
@@ -670,7 +671,7 @@ function CartSection({
 
       {/* Payment Section */}
       {cart.length > 0 && (
-        <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-6 space-y-6">
+        <div className="border-t bg-gradient-to-r from-gray-50 to-gray-100 p-6 space-y-6 shadow-t-lg">
           {/* Payment Method */}
           <div>
             <label className="block font-bold text-gray-700 mb-4 text-lg">
@@ -682,7 +683,7 @@ function CartSection({
                   payMethod === "cash"
                     ? "border-green-400 bg-green-50 text-green-800 shadow-md"
                     : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                }`}
+                } focus-within:ring-2 focus-within:ring-green-200`}
               >
                 <input
                   type="radio"
@@ -690,7 +691,7 @@ function CartSection({
                   value="cash"
                   checked={payMethod === "cash"}
                   onChange={() => setPayMethod("cash")}
-                  className="w-5 h-5 text-green-600"
+                  className="w-5 h-5 text-green-600 focus:ring-green-500"
                 />
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">💵</span>
@@ -702,7 +703,7 @@ function CartSection({
                   payMethod === "qr"
                     ? "border-blue-400 bg-blue-50 text-blue-800 shadow-md"
                     : "border-gray-200 bg-white hover:border-gray-300 hover:bg-gray-50"
-                }`}
+                } focus-within:ring-2 focus-within:ring-blue-200`}
               >
                 <input
                   type="radio"
@@ -710,7 +711,7 @@ function CartSection({
                   value="qr"
                   checked={payMethod === "qr"}
                   onChange={() => setPayMethod("qr")}
-                  className="w-5 h-5 text-blue-600"
+                  className="w-5 h-5 text-blue-600 focus:ring-blue-500"
                 />
                 <div className="flex items-center gap-2">
                   <span className="text-2xl">📱</span>
@@ -745,7 +746,7 @@ function CartSection({
           {/* Checkout Button */}
           <button
             disabled={cart.length === 0 || loading}
-            className="w-full py-5 rounded-2xl bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 text-white font-bold text-xl disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-700 hover:via-purple-800 hover:to-pink-700 transition-all transform hover:scale-105 disabled:hover:scale-100 shadow-2xl relative overflow-hidden"
+            className="w-full py-5 rounded-2xl bg-gradient-to-r from-purple-600 via-purple-700 to-pink-600 text-white font-bold text-xl disabled:opacity-50 disabled:cursor-not-allowed hover:from-purple-700 hover:via-purple-800 hover:to-pink-700 transition-all transform hover:scale-105 disabled:hover:scale-100 shadow-2xl relative overflow-hidden focus:outline-none focus:ring-4 focus:ring-purple-300"
             onClick={checkout}
           >
             {loading ? (
@@ -765,7 +766,7 @@ function CartSection({
           {/* Last Receipt Button */}
           {lastOrderId && (
             <button
-              className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 transition-all font-semibold shadow-lg flex items-center justify-center gap-3"
+              className="w-full py-4 rounded-2xl bg-gradient-to-r from-indigo-500 to-indigo-600 text-white hover:from-indigo-600 hover:to-indigo-700 transition-all font-semibold shadow-lg flex items-center justify-center gap-3 focus:outline-none focus:ring-2 focus:ring-indigo-200"
               onClick={() =>
                 window.open(
                   `${api.defaults.baseURL}/api/order/receipt/${lastOrderId}`,

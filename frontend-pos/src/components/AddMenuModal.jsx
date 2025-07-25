@@ -1,7 +1,7 @@
 import { useState } from "react";
 import api from "../services/api";
 
-export default function AddMenuModal({ isOpen, onClose, onAdded }) {
+export default function AddMenuModal({ isOpen, onClose, onAdded, setToast }) {
   const [formData, setFormData] = useState({
     name: "",
     price: "",
@@ -39,22 +39,28 @@ export default function AddMenuModal({ isOpen, onClose, onAdded }) {
         price: parseFloat(formData.price || 0),
         imageUrl:
           formData.imageUrl ||
-          `https://picsum.photos/300/200?random=${Date.now()}`,
+          `https://placehold.co/300x200/E0E0E0/616161?text=${formData.name.substring(
+            0,
+            5
+          )}`,
         description: formData.description,
         category: formData.category,
         temperature: formData.temperature,
         size: formData.size,
       };
 
-      // สมมติว่ามี createMenu function
       await api.post("/api/menu", menuData);
 
       resetForm();
       onAdded?.();
       onClose();
+      setToast({ message: "เพิ่มเมนูสำเร็จ!", type: "success" });
     } catch (err) {
       console.error("Error creating menu:", err);
-      alert("เพิ่มเมนูไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+      setToast({
+        message: "เพิ่มเมนูไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        type: "error",
+      });
     } finally {
       setLoading(false);
     }
@@ -70,8 +76,9 @@ export default function AddMenuModal({ isOpen, onClose, onAdded }) {
             <h2 className="text-2xl font-bold">เพิ่มเมนูใหม่</h2>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-purple-700 rounded-lg transition-colors"
+              className="p-2 hover:bg-purple-700 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-purple-300"
               disabled={loading}
+              aria-label="Close modal"
             >
               <svg
                 className="w-6 h-6"
@@ -136,7 +143,7 @@ export default function AddMenuModal({ isOpen, onClose, onAdded }) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">
                 หมวดหมู่
@@ -211,7 +218,7 @@ export default function AddMenuModal({ isOpen, onClose, onAdded }) {
             <button
               type="button"
               onClick={onClose}
-              className="flex-1 px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+              className="flex-1 px-6 py-3 rounded-lg border border-gray-300 text-gray-700 font-medium hover:bg-gray-50 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-200"
               disabled={loading}
             >
               ยกเลิก
